@@ -125,10 +125,10 @@ class MonitorManager:
 
         self.__write_pid()
         order_soldier = threading.Thread(target=self.__check_order)
+        order_soldier.join()
+        order_soldier.start()
 
         exit(0)
-        # 开始监控 
-        self.begin_monitor()
 
     def begin_monitor(self):
         current_monitor_key, current_moniroe_func = "", ""
@@ -164,6 +164,9 @@ class MonitorManager:
         logger.info("[ INIT PROCESS ] Complete Manager Init Success, The Current Jobs Is {}".format(sum([len(x) for x in self.monitor_dict.values()])))
         self.worker.start()  
 
+    def stop_monitor(self):
+        pass
+
     def __is_label(self, line):
         return True if line[0] == "[" and line[-1] == "]" else False
 
@@ -186,5 +189,7 @@ class MonitorManager:
 
             with open(".order_response.tmp", "w") as f:
                 response = f.content
+
+            time.sleep(1)
 
             
