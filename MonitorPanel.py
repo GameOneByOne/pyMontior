@@ -1,11 +1,13 @@
-
-
+import psutil
+import os
 
 class MonitorPanel:
     def __init__(self):
         self.print_queue = list()
         self.panel_Position = MAIN_MENU
-        self.manger_pid = self.__find_manage_pid()
+
+        if not self.__manager_is_alive():
+            print("Your Monitor Manager Is Not Running, Please Run It Firstly")
 
     def show_realtime_status(self):
         self.panel_Position = SHOW_REALTIME
@@ -35,6 +37,10 @@ class MonitorPanel:
 
         self.__print_format()
 
+    def __manager_is_alive(self):
+        manger_pid = self.__find_manage_pid()
+        return psutil.Process(manger_pid).is_running() if manger_pid != "" else False
+            
     def __print_format(self):
         max_line_len = max([len(x) for x in self.print_queue])
         max_phrase_len = [max([len(x[i])+3 for x in self.print_queue if i < len(x)]) for i in range(max_line_len)]
@@ -48,28 +54,22 @@ class MonitorPanel:
         self.print_queue.clear()
 
     def __find_manage_pid(self):
-        if "manager.pid" in os.listdir():
-            with open("manager.pid", "r") as f: 
-                return f.content
+        with open("manager.pid", "a+") as f: 
+            return f.content
+
+        return ""
+
+
+panel = MonitorPanel()
+
+while True:
+    if panel.panel_Position == MAIN_MENU: panel.show_menu()
+
+    user_input = input("Monitor Panel command > ")
+    if panel.panel_Position == MAIN_MENU:
+        if user_input.lower() == "q": exit(0)
+        elif user_input == "2": panel.show_disposable_status()
         
-        print("Monitor Manager Can't Find In Sys Pid , Please Run Manager Firstly")
-        exit(0)
-
-
-# panel = MonitorPanel()
-
-# while True:
-#     if panel.panel_Position == MAIN_MENU: panel.show_menu()
-
-#     user_input = input("Monitor Panel command > ")
-#     if panel.panel_Position == MAIN_MENU:
-#         if user_input.lower() == "q": exit(0)
-#         elif user_input == "2": panel.show_disposable_status()
-        
-#     elif panel.panel_Position == SHOW_DISPOSABLE: 
-#         if user_input.lower() == "q": panel.panel_Position = MAIN_MENU
-#         elif user_input.lower() == "rf": panel.show_disposable_status()
-
-#     elif panel.panel_Position == SHOW_REALTIME:
-#         if user_input.lower() == "q": panel.panel_Position = MAIN_MENU
-#         elif user_input.lower() == "rf": panel.show_realtime_status()
+    elif panel.panel_Position == SHOW_DISPOSABLE: 
+        if user_input.lower() == "q": panel.panel_Position = MAIN_MENU
+        elif user_input.lower() == "rf": panel.show_disposable_status()

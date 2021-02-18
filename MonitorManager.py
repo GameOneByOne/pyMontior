@@ -8,31 +8,26 @@ from MonitorReminder import MonitorReminder
 from MonitorConfig import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
+from redis.connection import ConnectionPool
+from redis.client import Redis
+import threading
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-handler = TimedRotatingFileHandler('./Monitor-out.log', when = 'd', interval = 1, backupCount=10)
+handler = TimedRotatingFileHandler('./Monitor.log', when = 'd', interval = 1, backupCount=10)
 handler.setFormatter(logging.Formatter('[%(asctime)s] %(filename)s [%(levelname)s] :%(message)s'))
 logger.addHandler(handler)
-
-logger = logging.getLogger("error")
-logger.setLevel(logging.DEBUG)
-handler = TimedRotatingFileHandler('./Monitor-error.log', when = 'd', interval = 1, backupCount=10)
-handler.setFormatter(logging.Formatter('[%(asctime)s] %(filename)s [%(levelname)s] :%(message)s'))
-logger.addHandler(handler)
-
-logger = logging.getLogger()
 
 
 class MonitorWorker:
     def __init__(self, reminder, core, cfg_dict):
-        # 初始化调度库
+        # 初始化调度器
         self.sched = BackgroundScheduler()
-        # 记录配置字段
+        # 初始化配置字典
         self.worker_config = cfg_dict
-        # 赋值reminder
+        # 赋值监控提醒器
         self.reminder = reminder
-        # 赋值core
+        # 赋值监控核心
         self.core = core
 
     def log_monitor_in(self, cfg_list):
@@ -108,30 +103,35 @@ class MonitorWorker:
 
 class MonitorManager:
     def __init__(self, reminder=MonitorReminder, worker=MonitorWorker, config_dict=dict()):
-        logger.info("[ Manager INIT PROCESS ] Monitor Online...")
+        logger.info("[ Manager INIT PROCESS ] Monitor Initialing ...")
+
         # 读取配置
         self.config_dict = DEFAULT_MONITOR_CONFIG_DICT
         self.config_dict.update(config_dict)
         self.monitor_dict = {x.get("KEY", ""): list() for x in self.config_dict.values()}
+        logger.info("[ Manager INIT PROCESS ] Config Init Success ...")
 
-        logger.info("[ Manager INIT PROCESS ] Complete Config Init Success ...")
         # 初始化Core
         self.core = MonitorCore()
-        logger.info("[ Manager INIT PROCESS ] Complete Core Init Success ...")
+        logger.info("[ Manager INIT PROCESS ] Core Init Success ...")
+
         # 初始化Reminder
         self.reminder = MonitorReminder()
-        logger.info("[ Manager INIT PROCESS ] Complete Reminder Init Success ...")
+        logger.info("[ Manager INIT PROCESS ] Reminder Init Success ...")
+
         # 初始化Worker
         self.worker = MonitorWorker(self.reminder, self.core, self.config_dict)
-        logger.info("[ Manager INIT PROCESS ] Complete Worker Init Success ...")
-        # 开始监控
-        self.__write_pid()
-        self.begin_monitor()
-        
-    def begin_monitor(self):
-        current_monitor_key = ""
-        current_moniroe_func = ""
+        logger.info("[ Manager INIT PROCESS ] Worker Init Success ...")
 
+        self.__write_pid()
+        order_soldier = threading.Thread(target=self.__check_order)
+
+        exit(0)
+        # 开始监控 
+        self.begin_monitor()
+
+    def begin_monitor(self):
+        current_monitor_key, current_moniroe_func = "", ""
         # 查看当前配置文件是否存在
         if not os.path.exists("monitor.cfg"): 
             logger.warn("[ Manager INIT PROCESS ] We Can Not Find The Config File, So Good Bye...")
@@ -140,24 +140,26 @@ class MonitorManager:
         with open("monitor.cfg", "r") as f:
             for line_num, line in enumerate(f.readlines(), 1):
                 line = line.strip()
-                if self.__is_empty_or_comment(line):
-                    continue
+                # 如果当前行是空行或者注释的话
+                if self.__is_empty_or_comment(line): continue
 
+                # 如果当前行是个标签的话
                 if self.__is_label(line):
                     current_monitor_key = self.config_dict.get(line, {}).get("KEY", "")
                     current_moniroe_func = self.config_dict.get(line, {}).get("FUNCTION", "")
                     
                     if current_monitor_key == "" or current_moniroe_func == "": 
-                        logger.warn("[ Manager INIT PROCESS ] {} Is Not In Config Dict, Will Pass...".format(line))
+                        logger.warn("[ Manager INIT PROCESS ] {} Is Not In Config Dict Or Config Isn't Complete, Will Pass...".format(line))
+                        current_monitor_key, current_moniroe_func = "", ""
                     
                     continue
                 
-                if current_monitor_key == "": 
-                    continue
-                else:
-                    # 符合条件的监控行，将会被创建定时任务
-                    self.monitor_dict[current_monitor_key].append(line)
-                    self.worker.create_sched(self.worker.__getattribute__(current_moniroe_func), line, line_num)
+                # 如果当前变量key是空的话
+                if self.__is_empty_key(current_monitor_key): continue
+
+                # 符合条件的行，将会被创建定时任务
+                self.monitor_dict[current_monitor_key].append(line)
+                self.worker.create_sched(self.worker.__getattribute__(current_moniroe_func), line, line_num)
 
         logger.info("[ INIT PROCESS ] Complete Manager Init Success, The Current Jobs Is {}".format(sum([len(x) for x in self.monitor_dict.values()])))
         self.worker.start()  
@@ -168,13 +170,21 @@ class MonitorManager:
     def __is_empty_or_comment(self, line):
         return True if line == "" or line[0] == "#" else False
 
+    def __is_empty_key(self, key):
+        return True if key == "" else False
+
     def __write_pid(self):
-        with open("./manager.pid", "a+") as f:
+        with open("./manager.pid", "w") as f:
             f.write(" ")
             f.write(str(os.getpid()))
 
+    def __check_order(self):
+        while True:
+            with open(".order_accept.tmp", "r") as f:
+                order = f.content
 
-# a = MonitorManager(config_dict = monitor_config_dict)
 
-# while True:
-#     time.sleep(5)
+            with open(".order_response.tmp", "w") as f:
+                response = f.content
+
+            
