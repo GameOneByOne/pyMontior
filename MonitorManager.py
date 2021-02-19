@@ -30,7 +30,7 @@ class MonitorWorker:
         # 赋值监控核心
         self.core = core
 
-    def log_monitor_in(self, cfg_list):
+    def log_monitor_in(self, item):
         key_words, file_name = cfg_list[2].split("|"), cfg_list[1]
         mark = False
         with open (file_name, "r") as f:
@@ -43,7 +43,7 @@ class MonitorWorker:
         template = DEFAULT_REMINDER_TEMPLATE.format(cfg_list[-1])
         self.__result_handle(cfg_list[-1], mark, template)
 
-    def process_monitor_exist(self, cfg_list):
+    def process_monitor_exist(self, item):
         process_name = cfg_list[1].strip()
         mark = False
         for pid in psutil.pids():
@@ -54,7 +54,7 @@ class MonitorWorker:
         template = DEFAULT_REMINDER_TEMPLATE.format(cfg_list[-1])
         self.__result_handle(cfg_list[-1], mark, template)
 
-    def running_monitor_range(self, cfg_list):
+    def running_monitor_range(self, item):
         item_name = cfg_list[1]
         up_threshold = float(cfg_list[2])
         down_threshold = float(cfg_list[3])
@@ -68,17 +68,11 @@ class MonitorWorker:
         template = DEFAULT_REMINDER_TEMPLATE.format(cfg_list[-1])
         self.__result_handle(cfg_list[-1], mark, template)
              
-    def create_sched(self, func, cfg_str, job_num):
-        cfg_list = [x.strip() for x in cfg_str.split(",")]
-        cfg_list.append(str(job_num))
-        cron_setting = [x.strip() for x in cfg_list[0].split(" ") if x != ""]
-        
-        self.sched.add_job(func, 'cron', minute=cron_setting[0], 
-                                    hour=cron_setting[1], 
-                                    day=cron_setting[2], 
-                                    month=cron_setting[3], 
-                                    day_of_week=cron_setting[4], 
-                                    args=[cfg_list], id=str(job_num))
+    def create_sched(self, item):      
+        self.sched.add_job(self.__getattribute__(item.func),
+                        'cron', minute=item.cron[0], hour=item.cron[1], 
+                        day=item.cron[2], month=item.cron[3], day_of_week=item.cron[4], 
+                        args=[item], id=str(item.job_num))
 
     def start(self):
         self.sched.start()
@@ -101,10 +95,29 @@ class MonitorWorker:
             self.__resume_job(line)
 
 
+class MonitorItem:
+    def __init__(self, monitor_func, cfg_str, job_num):
+        # 监控函数
+        self.func = monitor_func
+        # 配置字符串
+        self.cfg_str = cfg_str
+        # 配置列表
+        self.cfg_list = [x.strip() for x in cfg_str.split(",")]
+        # 配置时间周期
+        self.cron = [x.strip() for x in cfg_list[0].split(" ") if x != ""]
+        # 任务编号
+        self.job_num = str(job_num)
+        # 上次检查结果
+        self.pred_monitor_result = ""
+        # 上次检查时间
+        self.pred_monitor_datetime = ""
+
+
 class MonitorManager:
     def __init__(self, reminder=MonitorReminder, worker=MonitorWorker, config_dict=dict()):
         logger.info("[ Manager INIT PROCESS ] Monitor Initialing ...")
-
+        # 全局的监控项目管理变量
+        self.monitor_list = list()
         # 读取配置
         self.config_dict = DEFAULT_MONITOR_CONFIG_DICT
         self.config_dict.update(config_dict)
@@ -125,10 +138,7 @@ class MonitorManager:
 
         self.__write_pid()
         order_soldier = threading.Thread(target=self.__check_order)
-        order_soldier.join()
         order_soldier.start()
-
-        exit(0)
 
     def begin_monitor(self):
         current_monitor_key, current_moniroe_func = "", ""
@@ -157,9 +167,10 @@ class MonitorManager:
                 # 如果当前变量key是空的话
                 if self.__is_empty_key(current_monitor_key): continue
 
-                # 符合条件的行，将会被创建定时任务
-                self.monitor_dict[current_monitor_key].append(line)
-                self.worker.create_sched(self.worker.__getattribute__(current_moniroe_func), line, line_num)
+                # 符合条件的行，将会被创建监控对象，并开启周期任务
+                item = MonitorItem(current_moniroe_func, line, line_num)
+                self.monitor_dict[current_monitor_key].append(item)
+                self.worker.create_sched(item)
 
         logger.info("[ INIT PROCESS ] Complete Manager Init Success, The Current Jobs Is {}".format(sum([len(x) for x in self.monitor_dict.values()])))
         self.worker.start()  
@@ -183,13 +194,25 @@ class MonitorManager:
 
     def __check_order(self):
         while True:
-            with open(".order_accept.tmp", "r") as f:
-                order = f.content
-
-
-            with open(".order_response.tmp", "w") as f:
-                response = f.content
-
             time.sleep(1)
+            if ".order_accept.tmp" in os.listdir():
+                with open(".order_accept.tmp", "r") as f:
+                    # 读取命令后开始分析命令
+                    response = self.__parse_order(f.read())
+
+                with open(".order_response.tmp", "w") as f:
+                    # 将结果写到制定文件夹
+                    f.write(response)
+
+    def __parse_order(self, order):
+        if order == "Show Monitor Schedule": return self.__show_monitor_schedule() 
+        elif order == "": pass 
+        elif order == "": pass
+        else : return "Order Parse Error, Please Ensure Your Order Correctly"
+
+    def __show_monitor_schedule(self):
+        
+
+            
 
             
