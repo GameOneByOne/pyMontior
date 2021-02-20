@@ -31,9 +31,15 @@ class MonitorWorker:
         # 赋值监控核心
         self.core = core
 
-    def log_monitor_in(self, item):
-        self.__enter_handle(item)
+    def worker_handle(func):
+        def w(*args, **kwargs):
+            self.__enter_handle(*args[1])
+            func(*args, **kwargs)
+            self.__exit_handle(*args[1])
+        return w
 
+    @worker_handle
+    def log_monitor_in(self, item):
         file_name, key_words  = item.cfg_list[1], item.cfg_list[2].split("|"), 
 
         with open (file_name, "r") as f:
@@ -42,11 +48,8 @@ class MonitorWorker:
                     item.set_result(True)
                     break
 
-        self.__exit_handle(item)
-
+    @worker_handle          
     def process_monitor_exist(self, item):
-        self.__enter_handle(item)
-
         process_name = item.cfg_list[1].strip()
 
         for pid in psutil.pids():
@@ -54,21 +57,12 @@ class MonitorWorker:
                 item.set_result(True)
                 break
 
-        self.__exit_handle(item)
-
+    @worker_handle
     def running_monitor_range(self, item):
-        item_name = cfg_list[1]
-        up_threshold = float(cfg_list[2])
-        down_threshold = float(cfg_list[3])
-        mark = False
-
         for item in self.core.get_sys_status():
-            if item[0] == item_name and (float(item[1]) >= up_threshold or float(item[1]) < down_threshold):
-                mark = True
+            if item[0] == item.cfg_list[1] and (float(item[1]) >= float(item.cfg_list[2]) or float(item[1]) < float(item.cfg_list[3])):
+                item.set_result(True)
                 break
-
-        template = DEFAULT_REMINDER_TEMPLATE.format(cfg_list[-1])
-        self.__result_handle(cfg_list[-1], mark, template)
              
     def create_sched(self, item):      
         self.sched.add_job(self.__getattribute__(item.func),
