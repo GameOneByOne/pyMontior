@@ -119,6 +119,10 @@ class MonitorManager:
         self.worker = MonitorWorker(self.reminder, self.core, self.config_dict)
         logger.info("[ Manager INIT PROCESS ] Worker Init Success ...")
 
+        if self.__find_self_alive():
+            print("[ Manager INIT PROCESS ] Manager Have Been Init Already , Please Use The Panel To Control It")
+            exit(0)
+
         self.__write_pid()
         order_soldier = threading.Thread(target=self.__check_order)
         order_soldier.setDaemon(True)
@@ -205,7 +209,14 @@ class MonitorManager:
                 responses += item.description()
 
         return responses
-        
+
+    def __find_self_alive(self):
+        if "manager.pid" in os.listdir():
+            with open("manager.pid", "r") as f: 
+                if int(f.read().strip()) in psutil.pids():
+                    return True
+
+        return False
 
             
 

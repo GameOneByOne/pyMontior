@@ -66,10 +66,11 @@ class MonitorPanel:
 
         return responses
         
-
     def __manager_is_alive(self):
         manger_pid = int(self.__find_manage_pid().strip())
-        return psutil.Process(manger_pid).is_running() if manger_pid != "" else False
+        if manger_pid in psutil.pids():
+            return psutil.Process(manger_pid).is_running() if manger_pid != "" else False
+        return False
             
     def __print_format(self):
         max_line_len = max([len(x) for x in self.print_queue])
@@ -84,8 +85,9 @@ class MonitorPanel:
         self.print_queue.clear()
 
     def __find_manage_pid(self):
-        with open("manager.pid", "r") as f: 
-            return f.read()
+        if "manager.pid" in os.listdir():
+            with open("manager.pid", "r") as f: 
+                return f.read()
 
         return ""
 
