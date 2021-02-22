@@ -8,7 +8,7 @@ class MonitorReminder:
         pass
     
     def send_mail(self):
-        logger.info("[ Monitor Reminder ] A Message Is To Send... {}".format(template))
+        logger.info("[ Monitor Reminder ] A Email Is To Send...")
 
-    def send_message(self, template):
-        logger.info("[ Monitor Reminder ] A Message Is To Send... {}".format(template))
+    def send_message(self):
+        logger.info("[ Monitor Reminder ] A Message Is To Send...")

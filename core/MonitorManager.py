@@ -36,12 +36,12 @@ class MonitorWorker:
 
     def worker_handle(func):
         def w(*args, **kwargs):
-            self.__enter_handle(*args[1])
+            args[0].__enter_handle(args[1])
             func(*args, **kwargs)
-            self.__exit_handle(*args[1])
+            args[0].__exit_handle(args[1])
         return w
 
-    # @worker_handle
+    @worker_handle
     def log_monitor_in(self, item):
         file_name, key_words  = item.cfg_list[1], item.cfg_list[2].split("|"), 
         with open (file_name, "r") as f:
@@ -50,7 +50,7 @@ class MonitorWorker:
                     item.set_result(True)
                     break
 
-    # @worker_handle          
+    @worker_handle          
     def process_monitor_exist(self, item):
         process_name = item.cfg_list[1].strip()
 
@@ -59,7 +59,7 @@ class MonitorWorker:
                 item.set_result(True)
                 break
 
-    # @worker_handle
+    @worker_handle
     def running_monitor_range(self, item):
         for data in self.core.get_sys_status():
             if data[0] == item.cfg_list[1] and (float(data[1]) >= float(item.cfg_list[2]) or float(data[1]) < float(item.cfg_list[3])):
@@ -82,19 +82,21 @@ class MonitorWorker:
         self.sched.resume_job(sched_id)
 
     def __exit_handle(self, item):
-        if not item.is_monitor_aim(): return 
+        if not item.is_monitor_aim(): 
+            item.set_status(ItemStatus.PENDING)
+            return 
 
         item.reset_result()
         # 进行消息通知
-        self.reminder.send_message(template)
+        self.reminder.send_message()
         # 暂停当前任务
-        self.__pause_job(line)
+        self.__pause_job(item.job_num)
         item.set_status(ItemStatus.CONGEALERING)
         # 进入冷静期
         time.sleep(DEFAULT_CONGEALER if self.worker_config.get("CONGEALER", "") == "" else self.worker_config.get["CONGEALER"])
         # 恢复任务
         item.set_status(ItemStatus.PENDING)
-        self.__resume_job(line)
+        self.__resume_job(item.job_num)
 
     def __enter_handle(self, item):
         # 设置item的状态
@@ -205,7 +207,7 @@ class MonitorManager:
         else : return "Order Parse Error, Please Ensure Your Order Correctly"
 
     def __show_monitor_schedule(self):
-        responses = "Monitor Key|Job Num|Cron Schedule|Pred Result|Pred Date\n"
+        responses = "Monitor Key|Job Num|Cron Schedule|Cur Status|Pred Result|Pred Date\n"
         for _, items in self.monitor_dict.items():
             for item in items:
                 responses += item.description()

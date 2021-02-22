@@ -30,20 +30,20 @@ class MonitorItem:
     def set_result(self, result: bool):
         if result: self.pred_monitor_datetime = datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
         
+        self.cur_monitor_result = result
         self.pred_monitor_result = result
 
     def is_monitor_aim(self):
         return self.cur_monitor_result
 
     def reset_result(self):
-        self.pred_monitor_result = self.cur_monitor_result
         self.cur_monitor_result = False
 
     def set_status(self, status: ItemStatus):
         self.status = status
 
     def description(self):
-        return "{}|Line [{}] Job|{}|{}|{}\n".format(self.monitor_key, self.job_num, self.cfg_list[0], 
+        return "{}|Line [{}] Job|{}|{}|{}|{}\n".format(self.monitor_key, self.job_num, self.cfg_list[0], self.status,
                         "Aimed" if self.pred_monitor_result else "Not Aimed", self.pred_monitor_datetime)
 
 
