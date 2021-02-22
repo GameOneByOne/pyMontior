@@ -184,36 +184,6 @@ class MonitorManager:
         with open("./manager.pid", "w") as f:
             f.write(str(os.getpid()))
 
-    def __check_order(self):
-        while True:
-            time.sleep(1)
-            if ".order_to_monitor.tmp" in os.listdir():
-                with open(".order_to_monitor.tmp", "r") as f:
-                    # 读取命令后开始分析命令
-                    print("Monitor Begin Read Order File")
-                    response = self.__parse_order(f.read())
-                
-                os.remove(".order_to_monitor.tmp")
-
-                with open(".response_to_panel.tmp", "w") as f:
-                    print("Monitor Begin Write Response File")
-                    # 将结果写到制定文件夹
-                    f.write(response)
-
-    def __parse_order(self, order):
-        if order == "Show Monitor Schedule": return self.__show_monitor_schedule() 
-        elif order == "": pass 
-        elif order == "": pass
-        else : return "Order Parse Error, Please Ensure Your Order Correctly"
-
-    def __show_monitor_schedule(self):
-        responses = "Monitor Key|Job Num|Cron Schedule|Cur Status|Pred Result|Pred Date\n"
-        for _, items in self.monitor_dict.items():
-            for item in items:
-                responses += item.description()
-
-        return responses
-
     def __find_self_alive(self):
         if "manager.pid" in os.listdir():
             with open("manager.pid", "r") as f: 
@@ -221,6 +191,40 @@ class MonitorManager:
                     return True
 
         return False
+
+    def __check_order(self):
+        while True:
+            time.sleep(1)
+            if ".order_to_monitor.tmp" in os.listdir():
+                # 读取命令后开始分析命令
+                with open(".order_to_monitor.tmp", "r") as f:
+                    response = self.__parse_order(f.readlines())
+                
+                os.remove(".order_to_monitor.tmp")
+
+                # 将结果写到制定文件夹
+                with open(".response_to_panel.tmp", "w") as f:
+                    f.write(response)
+
+    def __parse_order(self, *args):
+        args = args[0]
+        try:
+            if len(args) > 1:
+                return self.__getattribute__("_order_" + "_".join((x.lower().strip(" ").strip("\n") for x in args[0].split(" "))))(agrs[1:]) 
+            return self.__getattribute__("_order_" + "_".join((x.lower().strip(" ").strip("\n") for x in args[0].split(" "))))()
+
+        except:
+            return "Order Parse Error Or Excute Wrong, Please Ensure Your Order Correctly"
+
+    def _order_show_monitor_schedule(self,*args):
+        responses = "Monitor Key|Job Num|Cron Schedule|Cur Status|Pred Result|Pred Date\n"
+        for _, items in self.monitor_dict.items():
+            for item in items:
+                responses += item.description()
+
+        return responses
+
+
 
             
 

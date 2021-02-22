@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import Enum
 
 # Format Micro Defined
 FORMAT_LINE = "-"
@@ -9,10 +9,10 @@ SHOW_DISPOSABLE = "show_disposable"
 SHOW_REALTIME = "show_realtime"
 SEND_ORDER = "send_order"
 # Item Status Variable
-class ItemStatus(IntEnum):
-    PENDING = 0 # 等待任务调度
-    MONITORING = 1 # 监控中
-    CONGEALERING = 2 # 冷却中
+class ItemStatus(Enum):
+    PENDING = "Pending" # 等待任务调度
+    MONITORING = "Monitoring" # 监控中
+    CONGEALERING = "Congealering" # 冷却中
 
 # Micro Variable
 DEFAULT_CONGEALER = 30 * 60
