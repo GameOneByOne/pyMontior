@@ -28,7 +28,7 @@ class MonitorItem:
 
 
     def set_result(self, result: bool):
-        if result: self.pred_monitor_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%s')
+        if result: self.pred_monitor_datetime = datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S')
         
         self.pred_monitor_result = result
 

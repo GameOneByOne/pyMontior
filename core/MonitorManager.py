@@ -41,17 +41,16 @@ class MonitorWorker:
             self.__exit_handle(*args[1])
         return w
 
-    @worker_handle
+    # @worker_handle
     def log_monitor_in(self, item):
         file_name, key_words  = item.cfg_list[1], item.cfg_list[2].split("|"), 
-
         with open (file_name, "r") as f:
             for line in f.readlines():
                 if ([key_word in line for key_word in key_words].count(True) == len(key_words)):
                     item.set_result(True)
                     break
 
-    @worker_handle          
+    # @worker_handle          
     def process_monitor_exist(self, item):
         process_name = item.cfg_list[1].strip()
 
@@ -60,14 +59,14 @@ class MonitorWorker:
                 item.set_result(True)
                 break
 
-    @worker_handle
+    # @worker_handle
     def running_monitor_range(self, item):
-        for item in self.core.get_sys_status():
-            if item[0] == item.cfg_list[1] and (float(item[1]) >= float(item.cfg_list[2]) or float(item[1]) < float(item.cfg_list[3])):
+        for data in self.core.get_sys_status():
+            if data[0] == item.cfg_list[1] and (float(data[1]) >= float(item.cfg_list[2]) or float(data[1]) < float(item.cfg_list[3])):
                 item.set_result(True)
                 break
              
-    def create_sched(self, item):      
+    def create_sched(self, item): 
         self.sched.add_job(self.__getattribute__(item.func),
                         'cron', minute=item.cron[0], hour=item.cron[1], 
                         day=item.cron[2], month=item.cron[3], day_of_week=item.cron[4], 
@@ -162,10 +161,10 @@ class MonitorManager:
                 # 符合条件的行，将会被创建监控对象，并开启周期任务
                 item = MonitorItem(current_monitor_key, current_moniroe_func, line, line_num)
                 self.monitor_dict[current_monitor_key].append(item)
-                # self.worker.create_sched(item)
+                self.worker.create_sched(item)
 
         logger.info("[ INIT PROCESS ] Complete Manager Init Success, The Current Jobs Is {}".format(sum([len(x) for x in self.monitor_dict.values()])))
-        # self.worker.start()  
+        self.worker.start()  
 
     def stop_monitor(self):
         pass
@@ -181,7 +180,6 @@ class MonitorManager:
 
     def __write_pid(self):
         with open("./manager.pid", "w") as f:
-            f.write(" ")
             f.write(str(os.getpid()))
 
     def __check_order(self):

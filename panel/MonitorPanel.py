@@ -94,21 +94,19 @@ class MonitorPanel:
 
         return ""
 
+    def show(self):
+        while True:
+            if self.panel_Position == MAIN_MENU: self.show_menu()
 
-panel = MonitorPanel()
+            user_input = input("Monitor Panel command > ")
+            if self.panel_Position == MAIN_MENU:
+                if user_input.lower() == "q": exit(0)
+                elif user_input == "2": self.show_disposable_status()
+                elif user_input == "3": self.show_monitor_item()
+                
+            elif self.panel_Position == SHOW_DISPOSABLE: 
+                if user_input.lower() == "q": self.panel_Position = MAIN_MENU
+                elif user_input.lower() == "rf": self.show_disposable_status()
 
-while True:
-    if panel.panel_Position == MAIN_MENU: panel.show_menu()
-
-    user_input = input("Monitor Panel command > ")
-    if panel.panel_Position == MAIN_MENU:
-        if user_input.lower() == "q": exit(0)
-        elif user_input == "2": panel.show_disposable_status()
-        elif user_input == "3": panel.show_monitor_item()
-        
-    elif panel.panel_Position == SHOW_DISPOSABLE: 
-        if user_input.lower() == "q": panel.panel_Position = MAIN_MENU
-        elif user_input.lower() == "rf": panel.show_disposable_status()
-
-    elif panel.panel_Position == SEND_ORDER:
-        if user_input.lower() == "q": panel.panel_Position = MAIN_MENU
+            elif self.panel_Position == SEND_ORDER:
+                if user_input.lower() == "q": self.panel_Position = MAIN_MENU
